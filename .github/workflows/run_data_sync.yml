@@ -33,9 +33,9 @@ env:
   GITHUB_NAME: wvuu # change to yours
   GITHUB_EMAIL: wvuu@qq.com # change to yours
 
-  SAVE_DATA_IN_GITHUB_CACHE: false # if you deploy in the vercal, check the README
+  SAVE_DATA_IN_GITHUB_CACHE: true # if you deploy in the vercal, check the README
   DATA_CACHE_PREFIX: 'track_data'
-  BUILD_GH_PAGES: true # If you do not need GitHub Page please set it to `false`
+  BUILD_GH_PAGES: false # If you do not need GitHub Page please set it to `false`
   IGNORE_BEFORE_SAVING: 1
   IGNORE_START_END_RANGE: 10
 
