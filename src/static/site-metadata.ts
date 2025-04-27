@@ -9,6 +9,11 @@ interface ISiteMetadataResult {
   }[];
 }
 
+const getBasePath = () => {
+  const baseUrl = import.meta.env.BASE_URL;
+  return baseUrl === '/' ? '' : baseUrl;
+};
+
 const data: ISiteMetadataResult = {
   siteTitle: 'Running Page',
   siteUrl: 'https://run.yunvi.com',
@@ -16,8 +21,8 @@ const data: ISiteMetadataResult = {
   description: 'Personal site and blog',
   navLinks: [
     {
-      name: 'Google',
-      url: 'https://google.com',
+      name: 'Summary',
+      url: `${getBasePath()}/summary`,
     },
   ],
 };
