@@ -5,9 +5,7 @@ from generator import Generator
 import polyline
 import base64
 import os
-from svglib.svglib import svg2rlg
-from reportlab.graphics import renderPM
-
+import cairosvg  # 替换 svglib.svglib 和 reportlab.graphics
 
 SVG_WIDTH = 800
 SVG_HEIGHT = 600
@@ -18,15 +16,14 @@ POLYLINE_WIDTH = 3
 START_MARKER_COLOR = "#00FF00"  # Green
 END_MARKER_COLOR = "#FF0000"  # Red
 DEFAULT_OUTPUT_FILENAME = "route"
-PROMPT = """
-Create a running share image with a running path, add some other contents like running man and landscaping or something else to make it beautiful, the roadmap as shown you can do some color optimization.
+PLUS_PROMPT = """roadmap as shown you can do some color optimization.
 Write, distance: {distance} km pace: {pace} time: {time} date: {date} and typeset it yourself!
 """
 
 client = None
 
 
-def generate_share_image(distance, pace, time, date):
+def generate_share_image(distance, pace, time, date, client):
     """
     Generates a share image with the given parameters.
 
@@ -36,7 +33,33 @@ def generate_share_image(distance, pace, time, date):
         time: Time taken for the run.
         date: Date of the run.
     """
-    prompt = PROMPT.format(distance=distance, pace=pace, time=time, date=date)
+    base_prompt = "Create a running share image with a running path, add some other contents like running"
+    try:
+        chat_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a creative assistant for generating image prompts.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Enhance this prompt for a beautiful running share image: {base_prompt}",
+                },
+            ],
+            max_tokens=100,
+            temperature=0.8,
+        )
+        enhanced_prompt = chat_response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Error enhancing prompt: {e}")
+        enhanced_prompt = base_prompt
+    prompt = enhanced_prompt + PLUS_PROMPT.format(
+        distance=distance,
+        pace=pace,
+        time=time,
+        date=date,
+    )
 
     try:
         result = client.images.edit(
@@ -127,10 +150,12 @@ def generate_route_svg(
             f.write(svg_content)
 
         if format.lower() == "png":
-            drawing = svg2rlg(svg_filename)
-            renderPM.drawToFile(drawing, png_filename, fmt="PNG")
-            print(f"Route map generated: {png_filename}")
-            os.remove(svg_filename)
+            try:
+                cairosvg.svg2png(url=svg_filename, write_to=png_filename)
+                os.remove(svg_filename)
+                print(f"Route map generated: {png_filename}")
+            except Exception as e:
+                print(f"Error during PNG conversion: {e}")
         else:
             print(f"Route map generated: {svg_filename}")
     except IOError as e:
@@ -139,11 +164,26 @@ def generate_route_svg(
         print(f"Error during conversion: {e}")
 
 
-def run_auto_sync(client, format="svg"):
+def run_auto_sync(client, format="svg", date=None):
+    """
+    if date is None, get the latest activity
+    """
     generator = Generator(SQL_FILE)
     activities_list = generator.load()
-    # only the latest activity FIXME support multiple activities later
-    activity = activities_list[-1]
+    if date:
+        activity = next(
+            (
+                activity
+                for activity in activities_list
+                if activity["start_date_local"].startswith(date)
+            ),
+            None,
+        )
+        if not activity:
+            print(f"No activity found for date: {date}")
+            return
+    else:
+        activity = activities_list[-1]
 
     if "summary_polyline" in activity and activity["summary_polyline"]:
         generate_route_svg(activity["summary_polyline"], format=format)
@@ -160,7 +200,7 @@ def run_auto_sync(client, format="svg"):
         else:
             pace = "0:00"
 
-        generate_share_image(distance, pace, moving_time, date)
+        generate_share_image(distance, pace, moving_time, date, client=client)
     else:
         print("No route data found")
 
@@ -180,10 +220,11 @@ if __name__ == "__main__":
     parser.add_argument("--base_url", default="", help="OpenAI base URL") or os.getenv(
         "OPENAI_BASE_URL"
     )
+    parser.add_argument("--date", help="Date of the activity in YYYY-MM-DD format")
     args = parser.parse_args()
     if args.base_url:
         client = OpenAI(base_url=args.base_url, api_key=args.api_key)
     else:
         client = OpenAI(api_key=args.api_key)
 
-    run_auto_sync(format=args.format, client=client)
+    run_auto_sync(format=args.format, client=client, date=args.date)
