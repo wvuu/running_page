@@ -12,7 +12,7 @@ RUN sed -i 's@http://archive.ubuntu.com/ubuntu/@https://mirrors.tuna.tsinghua.ed
   && pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/ \
   && pip3 install -r requirements.txt
 
-FROM node:18  AS develop-node
+FROM node:20  AS develop-node
 WORKDIR /root/running_page
 COPY ./package.json /root/running_page/package.json
 COPY ./pnpm-lock.yaml /root/running_page/pnpm-lock.yaml
