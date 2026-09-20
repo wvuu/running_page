@@ -26,7 +26,7 @@ export function Header({ dark, toggleTheme, page, onNavigate }: HeaderProps) {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <span className="text-xl font-bold text-[var(--color-text)]">
-            RUNNING<span className="text-[var(--color-run)]">.</span>PAGE
+            wenmin<span className="text-[var(--color-run)]">.</span>run
           </span>
         </div>
 
